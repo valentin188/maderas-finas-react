@@ -1,0 +1,61 @@
+/* src/App.css */
+
+/* Paleta de colores Maderas Finas */
+:root {
+  --madera-primario: #5c3a21;
+  --madera-secundario: #8c5a32;
+  --madera-claro: #f8f4ef;
+  --madera-oscuro: #2c1a0e;
+}
+
+body {
+  background-color: var(--madera-claro);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Tarjetas de productos */
+.card-img-top {
+  height: 220px;
+  object-fit: cover;
+}
+
+.card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  border: 1px solid #e0d7cd;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 18px rgba(92, 58, 33, 0.15) !important;
+}
+
+/* Hero Banner para el Home */
+.hero-banner {
+  background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url('./assets/blog/blog_1.jpg');
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 80px 20px;
+  border-radius: 12px;
+}
+
+/* Botones personalizados */
+.btn-madera {
+  background-color: var(--madera-primario);
+  color: white;
+  border: none;
+}
+
+.btn-madera:hover {
+  background-color: var(--madera-oscuro);
+  color: white;
+}
+
+/* Insignias de Stock */
+.badge-critico {
+  background-color: #dc3545;
+}
+
+.badge-normal {
+  background-color: #198754;
+}
