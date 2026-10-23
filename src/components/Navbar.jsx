@@ -21,11 +21,10 @@ export default function Navbar({ usuarioActual, cerrarSesion, cantidadCarrito = 
             <li className="nav-item">
               <Link className="nav-link" to="/categorias">Categorías</Link>
             </li>
-            {usuarioActual && usuarioActual.tipo !== "Cliente" && (
-              <li className="nav-item">
-                <Link className="nav-link text-warning fw-bold" to="/admin">Admin</Link>
-              </li>
-            )}
+            
+            <li className="nav-item">
+              <Link className="nav-link text-warning fw-bold" to="/admin">Administración</Link>
+            </li>
           </ul>
 
           <div className="d-flex align-items-center gap-2">

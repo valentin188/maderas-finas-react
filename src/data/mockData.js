@@ -1,5 +1,4 @@
 // src/data/mockData.js
-
 const productosIniciales = [
   {
     codigo: "PR001",
@@ -44,14 +43,47 @@ const productosIniciales = [
     stock: 30,
     stockCritico: 5,
     imagen: "estanteria-oficina.jpg"
+  },
+    {
+    codigo: "PR005",
+    nombre: "Ropero con espejo",
+    categoria: "Muebles",
+    material: "Madera de roble",
+    tiempo: 12,
+    precio: 420000,
+    stock: 10,
+    stockCritico: 5,
+    imagen: "ropero-espejo.jpg"
+  },
+  {
+    codigo: "PR006",
+    nombre: "Mesón de cocina",
+    categoria: "Muebles",
+    material: "Madera de nogal",
+    tiempo: 14,
+    precio: 520000,
+    stock: 8,
+    stockCritico: 3,
+    imagen: "encimera-cocina.jpg"
   }
 ];
 
 export const inicializarStorage = () => {
-  if (!localStorage.getItem("productos")) {
-    localStorage.setItem("productos", JSON.stringify(productosIniciales));
-  }
+  const productosGuardados = JSON.parse(localStorage.getItem("productos") || "[]");
+  const productosActualizados = [...productosGuardados];
+
+  productosIniciales.forEach((productoInicial) => {
+    const existe = productosActualizados.some(
+      producto => producto.codigo === productoInicial.codigo
+    );
+    if (!existe) {
+      productosActualizados.push(productoInicial);
+    }
+  });
+
+  localStorage.setItem("productos", JSON.stringify(productosActualizados));
   if (!localStorage.getItem("usuarios")) {
+    
     localStorage.setItem("usuarios", JSON.stringify([
       {
         run: "11111111K",
@@ -68,6 +100,11 @@ export const inicializarStorage = () => {
 export const obtenerProductos = () => {
   inicializarStorage();
   return JSON.parse(localStorage.getItem("productos")) || [];
+};
+
+export const obtenerProductoPorCodigo = (codigo) => {
+  const productos = obtenerProductos();
+  return productos.find(p => p.codigo === codigo) || null;
 };
 
 export const guardarProducto = (producto) => {

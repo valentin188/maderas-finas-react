@@ -8,15 +8,15 @@ import Footer from './components/Footer';
 // Importación de las páginas reales
 import Home from './pages/Home';
 import Productos from './pages/Productos';
+import Admin from './pages/Admin';
+import Categorias from './pages/Categorias';
+import Login from './pages/Login';
+import Registro from './pages/Registro';
 
 import { obtenerCarrito } from './data/mockData';
 
 // Vistas temporales restantes (se reemplazarán en los siguientes pasos)
-const Categorias = () => <div className="container py-5"><h2>🏷️ Categorías</h2></div>;
-const Login = () => <div className="container py-5"><h2>👤 Iniciar Sesión</h2></div>;
-const Registro = () => <div className="container py-5"><h2>📝 Registro de Usuario</h2></div>;
 const Carrito = () => <div className="container py-5"><h2>🛒 Carrito de Compras</h2></div>;
-const Admin = () => <div className="container py-5"><h2>⚙️ Panel de Administración</h2></div>;
 
 export default function App() {
   const [usuarioActual, setUsuarioActual] = useState(null);
