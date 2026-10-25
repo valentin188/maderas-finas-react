@@ -1,76 +1,508 @@
-/* src/App.css */
-
-/* Paleta de colores Maderas Finas */
-:root {
-  --madera-primario: #5c3a21;
-  --madera-secundario: #8c5a32;
-  --madera-claro: #f8f4ef;
-  --madera-oscuro: #2c1a0e;
-}
-
-body {
-  background-color: var(--madera-claro);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Tarjetas de productos */
-.card-img-top {
-  height: 220px;
-  object-fit: cover;
-}
-
-.card {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  border: 1px solid #e0d7cd;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 18px rgba(92, 58, 33, 0.15) !important;
-}
-
-/* Hero Banner para el Home */
+/* Banner principal */
 .hero-banner {
-  background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url('./assets/blog/blog_1.jpg');
-  background-size: cover;
-  background-position: center;
-  color: white;
-  padding: 80px 20px;
+  background: linear-gradient(
+    120deg,
+    #29180f 0%,
+    #5c3a21 50%,
+    #805331 100%
+  ) !important;
+
+  min-height: 350px;
+  width: 100%;
+  padding: 65px 30px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+  border-radius: 16px;
+
+  box-shadow: 0 12px 35px rgba(44, 26, 14, 0.15);
+}
+
+/* Título principal */
+.hero-banner h1,
+.hero-banner h1.display-4 {
+  color: #ffffff !important;
+
+  font-size: clamp(2.5rem, 5vw, 4.2rem);
+  font-weight: 800 !important;
+
+  letter-spacing: -1.5px;
+  line-height: 1.15;
+
+  margin: 0 0 20px;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+}
+
+/* Descripción */
+.hero-banner p,
+.hero-banner p.lead {
+  color: #f1e2d3 !important;
+
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  font-weight: 400;
+
+  max-width: 700px;
+  line-height: 1.7;
+
+  margin: 0 auto 25px;
+}
+
+/* Botón de catálogo */
+.hero-banner .btn {
+  background-color: #f5b920 !important;
+  color: #21170e !important;
+
+  border: none !important;
+  border-radius: 10px;
+
+  padding: 14px 30px;
+  font-weight: 700;
+
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.15);
+
+  transition: transform 0.2s ease,
+              background-color 0.2s ease;
+}
+
+.hero-banner .btn:hover {
+  background-color: #ffd05a !important;
+  color: #21170e !important;
+  transform: translateY(-2px);
+}
+
+/* Adaptación a celulares */
+@media (max-width: 768px) {
+  .hero-banner {
+    min-height: 320px;
+    padding: 55px 22px;
+    border-radius: 12px;
+  }
+
+  .hero-banner h1 {
+    letter-spacing: -0.5px;
+  }
+
+  .hero-banner .btn {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+}
+
+
+/* ======================================
+   BOTÓN CONTINUAR PEDIDO - MADERAS FINAS
+   ====================================== */
+
+.carrito-resumen .btn-continuar-pedido {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  width: 100%;
+  min-height: 64px;
+  padding: 13px 18px;
+
+  background: linear-gradient(
+    110deg,
+    #5c3a21 0%,
+    #8c5a32 100%
+  ) !important;
+
+  color: #ffffff !important;
+  border: 1px solid #8c5a32 !important;
   border-radius: 12px;
+
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: left;
+
+  box-shadow: 0 6px 18px rgba(92, 58, 33, 0.20);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
-/* Botones personalizados */
-.btn-madera {
-  background-color: var(--madera-primario);
+/* Flecha del botón */
+.continuar-flecha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 36px;
+  height: 36px;
+
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+
+  color: #ffffff;
+  font-size: 23px;
+  font-weight: 500;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+/* Animación al pasar el cursor */
+.carrito-resumen .btn-continuar-pedido:hover {
+  color: #ffffff !important;
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 10px 25px rgba(92, 58, 33, 0.30);
+}
+
+/* Animación de la flecha */
+.btn-continuar-pedido:hover .continuar-flecha {
+  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Accesibilidad con teclado */
+.btn-continuar-pedido:focus-visible {
+  outline: 3px solid #f5b920;
+  outline-offset: 3px;
+}
+
+/* Texto debajo del botón */
+.texto-pedido-seguro {
+  text-align: center;
+  font-size: 12px;
+  color: #827568;
+  margin-top: 13px;
+  margin-bottom: 0;
+}
+
+/* Adaptación a celulares */
+@media (max-width: 768px) {
+  .carrito-resumen .btn-continuar-pedido {
+    min-height: 58px;
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+
+  .continuar-flecha {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Respeta preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  .carrito-resumen .btn-continuar-pedido,
+  .continuar-flecha {
+    transition: none;
+  }
+}
+
+
+/* =======================================
+   CONFIRMAR PEDIDO - MADERAS FINAS
+   ======================================= */
+
+.pagina-carrito form .btn-confirmar-pedido {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+
+  width: 100%;
+  min-height: 62px;
+
+  padding: 15px 22px;
+
+  background: linear-gradient(
+    110deg,
+    #5c3a21,
+    #8c5a32
+  ) !important;
+
+  color: #ffffff !important;
+  border: 1px solid #8c5a32 !important;
+  border-radius: 12px;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  box-shadow: 0 6px 18px rgba(92, 58, 33, 0.22);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* Efecto al pasar el cursor */
+.pagina-carrito form .btn-confirmar-pedido:hover {
+  background: linear-gradient(
+    110deg,
+    #704526,
+    #9c683d
+  ) !important;
+
+  color: #ffffff !important;
+  transform: translateY(-2px);
+
+  box-shadow: 0 10px 25px rgba(92, 58, 33, 0.3);
+}
+
+/* Flecha de continuación */
+.flecha-confirmar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+
   color: white;
-  border: none;
+  font-size: 22px;
+
+  transition: transform 0.2s ease;
 }
 
-.btn-madera:hover {
-  background-color: var(--madera-oscuro);
-  color: white;
+/* Movimiento de la flecha */
+.btn-confirmar-pedido:hover .flecha-confirmar {
+  transform: translateX(4px);
 }
 
-/* Insignias de Stock */
-.badge-critico {
-  background-color: #dc3545;
+/* Accesibilidad con teclado */
+.btn-confirmar-pedido:focus-visible {
+  outline: 3px solid #f5b920;
+  outline-offset: 3px;
 }
 
-.badge-normal {
-  background-color: #198754;
+/* Mensaje inferior */
+.mensaje-confirmacion {
+  text-align: center;
+  font-size: 13px;
+  color: #827568;
+
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+/* Adaptación a celulares */
+@media (max-width: 768px) {
+  .pagina-carrito form .btn-confirmar-pedido {
+    min-height: 58px;
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagina-carrito form .btn-confirmar-pedido,
+  .flecha-confirmar {
+    transition: none;
+  }
 }
 
 
-/* Bordes en el formulario de administración */
-.form-control,
-.form-select {
-  border: 1px solid #9ca3af;
-  border-radius: 6px;
-  background-color: #ffffff;
+/* ===================================
+   BOTÓN VOLVER AL CATÁLOGO
+   =================================== */
+
+.btn.btn-volver-catalogo {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  min-height: 54px;
+  padding: 13px 28px;
+
+  background: linear-gradient(
+    110deg,
+    #5c3a21,
+    #8c5a32
+  ) !important;
+
+  color: #ffffff !important;
+  border: 1px solid #8c5a32 !important;
+  border-radius: 11px;
+
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+
+  box-shadow: 0 6px 18px rgba(92, 58, 33, 0.18);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
-.form-control:focus,
-.form-select:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+.btn.btn-volver-catalogo:hover {
+  color: #ffffff !important;
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(92, 58, 33, 0.28);
+}
+
+.btn.btn-volver-catalogo:focus-visible {
+  outline: 3px solid #f5b920;
+  outline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+  .btn.btn-volver-catalogo {
+    width: 100%;
+    padding: 12px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn.btn-volver-catalogo {
+    transition: none;
+  }
+}
+
+
+/* ====================================
+   BOTÓN AGREGAR AL CARRITO
+   MADERAS FINAS
+   ==================================== */
+
+.btn.btn-agregar-carrito {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  width: 100%;
+  min-height: 54px;
+  padding: 13px 20px;
+
+  background: linear-gradient(
+    110deg,
+    #5c3a21,
+    #8c5a32
+  ) !important;
+
+  color: #ffffff !important;
+  border: 1px solid #8c5a32 !important;
+  border-radius: 11px;
+
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+
+  cursor: pointer;
+
+  box-shadow: 0 5px 15px rgba(92, 58, 33, 0.18);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* EFECTO AL PASAR EL MOUSE */
+.btn.btn-agregar-carrito:hover:not(:disabled) {
+  background: linear-gradient(
+    110deg,
+    #704526,
+    #9c683d
+  ) !important;
+
+  color: #ffffff !important;
+  transform: translateY(-2px);
+
+  box-shadow: 0 9px 22px rgba(92, 58, 33, 0.28);
+}
+
+/* EFECTO AL PRESIONAR */
+.btn.btn-agregar-carrito:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* PRODUCTO AGOTADO */
+.btn.btn-agregar-carrito:disabled {
+  background: #b9ada3 !important;
+  border-color: #b9ada3 !important;
+  color: #ffffff !important;
+
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.75;
+}
+
+/* ACCESIBILIDAD */
+.btn.btn-agregar-carrito:focus-visible {
+  outline: 3px solid #f5b920;
+  outline-offset: 3px;
+}
+
+/* CELULARES */
+@media (max-width: 768px) {
+  .btn.btn-agregar-carrito {
+    min-height: 50px;
+    font-size: 14px;
+    padding: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn.btn-agregar-carrito {
+    transition: none;
+  }
+}
+
+
+/* BOTONES PANEL DE ADMINISTRACIÓN */
+
+.admin-btn-guardar,
+.admin-btn-limpiar {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.admin-btn-guardar:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  box-shadow: 0 9px 22px rgba(92, 58, 33, 0.28) !important;
+}
+
+.admin-btn-limpiar:hover {
+  transform: translateY(-2px);
+  filter: brightness(0.96);
+}
+
+.admin-btn-guardar:focus-visible,
+.admin-btn-limpiar:focus-visible {
+  outline: 3px solid #f5b920;
+  outline-offset: 3px;
+}
+
+@media (max-width: 576px) {
+  .admin-btn-guardar,
+  .admin-btn-limpiar {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-btn-guardar,
+  .admin-btn-limpiar {
+    transition: none;
+  }
 }

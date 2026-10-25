@@ -1,158 +1,431 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
+
 import {
   obtenerProductos,
   guardarProducto,
   eliminarProducto
 } from '../data/mockData';
 
+// Formulario inicial
+const productoInicial = {
+  codigo: '',
+  nombre: '',
+  categoria: 'Muebles',
+  material: '',
+  tiempo: 1,
+  precio: 0,
+  stock: 0,
+  stockCritico: 5,
+  imagen: ''
+};
+
+// Formato de precios chilenos
+const formatoPrecio = (valor) =>
+  '$' + Number(valor).toLocaleString('es-CL');
+
+// Diseño del botón principal
+const estiloGuardar = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '10px',
+  minHeight: '52px',
+  padding: '13px 26px',
+  background: 'linear-gradient(110deg, #5c3a21, #8c5a32)',
+  color: '#ffffff',
+  border: '1px solid #8c5a32',
+  borderRadius: '10px',
+  fontSize: '15px',
+  fontWeight: '700',
+  cursor: 'pointer',
+  boxShadow: '0 5px 15px rgba(92, 58, 33, 0.18)'
+};
+
+// Diseño del botón secundario
+const estiloLimpiar = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '10px',
+  minHeight: '52px',
+  padding: '13px 26px',
+  background: '#f8f4ef',
+  color: '#5c3a21',
+  border: '1px solid #cbb9a8',
+  borderRadius: '10px',
+  fontSize: '15px',
+  fontWeight: '600',
+  cursor: 'pointer'
+};
+
 export default function Admin() {
-  const [productos, setProductos] = useState([]);
+
+  // Productos registrados
+  const [productos, setProductos] = useState(obtenerProductos);
+
+  // Modo de edición
   const [editando, setEditando] = useState(false);
+
+  // Datos del formulario
   const [producto, setProducto] = useState({
-    codigo: '',
-    nombre: '',
-    categoria: 'Muebles',
-    material: '',
-    tiempo: 1,
-    precio: 0,
-    stock: 0,
-    stockCritico: 5,
-    imagen: ''
+    ...productoInicial
   });
 
-  useEffect(() => {
-    setProductos(obtenerProductos());
-  }, []);
+  // Buscador y mensajes
+  const [busqueda, setBusqueda] = useState('');
+  const [mensaje, setMensaje] = useState(null);
 
+  // Actualizar campos
   const manejarCambio = (e) => {
     const { name, value } = e.target;
 
-    setProducto({
-      ...producto,
-      [name]: ['tiempo', 'precio', 'stock', 'stockCritico'].includes(name)
+    const camposNumericos = [
+      'tiempo',
+      'precio',
+      'stock',
+      'stockCritico'
+    ];
+
+    setProducto((anterior) => ({
+      ...anterior,
+      [name]: camposNumericos.includes(name)
         ? Number(value)
         : value
-    });
+    }));
   };
 
+  // Limpiar formulario
   const limpiarFormulario = () => {
-    setProducto({
-      codigo: '',
-      nombre: '',
-      categoria: 'Muebles',
-      material: '',
-      tiempo: 1,
-      precio: 0,
-      stock: 0,
-      stockCritico: 5,
-      imagen: ''
-    });
+    setProducto({ ...productoInicial });
     setEditando(false);
+    setMensaje(null);
   };
 
-  const manejarEnvio = (e) => {
-    e.preventDefault();
-
-    const codigo = producto.codigo.trim().toUpperCase();
-    const nombre = producto.nombre.trim();
-    const material = producto.material.trim();
-    const imagen = producto.imagen.trim();
+  // Validaciones de productos
+  const validarProducto = (datos) => {
 
     if (
-      !codigo ||
-      !nombre ||
-      !material ||
-      !imagen ||
-      producto.tiempo < 1 ||
-      producto.precio < 0 ||
-      producto.stock < 0 ||
-      producto.stockCritico < 0
+      !datos.codigo ||
+      !datos.nombre ||
+      !datos.categoria ||
+      !datos.material ||
+      !datos.imagen
     ) {
-      alert('Completa todos los campos correctamente.');
-      return;
+      return 'Debes completar todos los campos obligatorios.';
     }
+
+    if (
+      !Number.isInteger(datos.tiempo) ||
+      datos.tiempo < 1
+    ) {
+      return 'El tiempo de fabricación debe ser al menos 1 día.';
+    }
+
+    if (
+      !Number.isInteger(datos.precio) ||
+      datos.precio < 0
+    ) {
+      return 'El precio debe ser un número entero mayor o igual a cero.';
+    }
+
+    if (
+      !Number.isInteger(datos.stock) ||
+      datos.stock < 0
+    ) {
+      return 'El stock debe ser un número entero mayor o igual a cero.';
+    }
+
+    if (
+      !Number.isInteger(datos.stockCritico) ||
+      datos.stockCritico < 0
+    ) {
+      return 'El stock crítico debe ser un número entero válido.';
+    }
+
+    return null;
+  };
+
+  // Agregar o actualizar producto
+  const manejarEnvio = (e) => {
+    e.preventDefault();
+    setMensaje(null);
 
     const productoGuardar = {
       ...producto,
-      codigo,
-      nombre,
-      material,
-      imagen
+      codigo: producto.codigo.trim().toUpperCase(),
+      nombre: producto.nombre.trim(),
+      material: producto.material.trim(),
+      imagen: producto.imagen.trim()
     };
 
-    const existe = productos.some(p => p.codigo === codigo);
+    const error = validarProducto(productoGuardar);
 
-    if (existe && !editando) {
-      alert('Ya existe un producto con ese código.');
+    if (error) {
+      setMensaje({
+        tipo: 'danger',
+        texto: error
+      });
       return;
     }
 
-    const productosActualizados = guardarProducto(productoGuardar);
-    setProductos(productosActualizados);
-    limpiarFormulario();
+    // Evitar códigos duplicados
+    const existe = productos.some(
+      (p) => p.codigo === productoGuardar.codigo
+    );
 
-    alert(editando
-      ? 'Producto actualizado correctamente.'
-      : 'Producto agregado correctamente.');
+    if (existe && !editando) {
+      setMensaje({
+        tipo: 'danger',
+        texto: 'Ya existe un producto con ese código.'
+      });
+      return;
+    }
+
+    try {
+      const productosActualizados = guardarProducto(
+        productoGuardar
+      );
+
+      setProductos(productosActualizados);
+
+      setProducto({ ...productoInicial });
+      setEditando(false);
+
+      setMensaje({
+        tipo: 'success',
+        texto: editando
+          ? 'Producto actualizado correctamente.'
+          : 'Producto agregado correctamente.'
+      });
+
+    } catch {
+      setMensaje({
+        tipo: 'danger',
+        texto: 'No se pudo guardar el producto.'
+      });
+    }
   };
 
+  // Editar producto
   const editarProducto = (prod) => {
     setProducto({ ...prod });
     setEditando(true);
+    setMensaje(null);
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
+  // Eliminar producto
   const borrarProducto = (codigo) => {
-    if (window.confirm(`¿Deseas eliminar el producto ${codigo}?`)) {
+
+    const confirmar = window.confirm(
+      `¿Estás seguro de eliminar el producto ${codigo}?`
+    );
+
+    if (!confirmar) return;
+
+    try {
       const productosActualizados = eliminarProducto(codigo);
+
       setProductos(productosActualizados);
 
       if (producto.codigo === codigo) {
         limpiarFormulario();
       }
+
+      setMensaje({
+        tipo: 'success',
+        texto: 'Producto eliminado correctamente.'
+      });
+
+    } catch {
+      setMensaje({
+        tipo: 'danger',
+        texto: 'No se pudo eliminar el producto.'
+      });
     }
   };
 
-  return (
-    <div className="container py-5">
-      <h2 className="fw-bold mb-4">⚙️ Panel de Administración</h2>
+  // Filtrar productos
+  const productosFiltrados = productos.filter((p) => {
+    const texto = busqueda.toLowerCase().trim();
 
-      <div className="card shadow-sm mb-5">
-        <div className="card-header fw-bold">
-          {editando ? 'Editar Producto' : 'Agregar Producto'}
+    return (
+      p.nombre.toLowerCase().includes(texto) ||
+      p.codigo.toLowerCase().includes(texto) ||
+      p.categoria.toLowerCase().includes(texto)
+    );
+  });
+
+  // Indicadores
+  const totalProductos = productos.length;
+
+  const productosCriticos = productos.filter(
+    (p) => p.stock > 0 && p.stock <= p.stockCritico
+  ).length;
+
+  const productosAgotados = productos.filter(
+    (p) => p.stock <= 0
+  ).length;
+
+  return (
+    <main className="container-fluid px-3 px-md-5 py-5">
+
+      {/* ENCABEZADO */}
+      <div className="mb-4">
+
+        <h1
+          className="fw-bold"
+          style={{ color: '#2c1a0e' }}
+        >
+          Panel de Administración
+        </h1>
+
+        <p className="text-muted">
+          Gestiona los productos, precios e inventario
+          de Maderas Finas.
+        </p>
+
+      </div>
+
+      {/* INDICADORES */}
+      <div className="row g-3 mb-5">
+
+        <div className="col-md-4">
+          <div className="card shadow-sm h-100">
+            <div className="card-body">
+
+              <p className="text-muted mb-2">
+                Productos registrados
+              </p>
+
+              <h2
+                className="fw-bold"
+                style={{ color: '#5c3a21' }}
+              >
+                {totalProductos}
+              </h2>
+
+            </div>
+          </div>
         </div>
 
-        <div className="card-body">
-          <form onSubmit={manejarEnvio}>
-            <div className="col-12">
-                <h5 className="border-bottom pb-2 mb-1">Información del producto</h5>
+        <div className="col-md-4">
+          <div className="card shadow-sm h-100">
+            <div className="card-body">
+
+              <p className="text-muted mb-2">
+                Productos con stock crítico
+              </p>
+
+              <h2 className="fw-bold text-warning">
+                {productosCriticos}
+              </h2>
+
             </div>
+          </div>
+        </div>
+
+        <div className="col-md-4">
+          <div className="card shadow-sm h-100">
+            <div className="card-body">
+
+              <p className="text-muted mb-2">
+                Productos agotados
+              </p>
+
+              <h2 className="fw-bold text-danger">
+                {productosAgotados}
+              </h2>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* FORMULARIO */}
+      <div className="card shadow-sm mb-5">
+
+        <div
+          className="card-header fw-bold py-3"
+          style={{
+            backgroundColor: '#5c3a21',
+            color: '#ffffff'
+          }}
+        >
+          {editando
+            ? 'Editar producto'
+            : 'Registrar nuevo producto'}
+        </div>
+
+        <div className="card-body p-4">
+
+          {mensaje && (
+            <div
+              className={`alert alert-${mensaje.tipo}`}
+              role="alert"
+            >
+              {mensaje.texto}
+            </div>
+          )}
+
+          <form onSubmit={manejarEnvio}>
+
+            {/* INFORMACIÓN GENERAL */}
+            <h5 className="border-bottom pb-2 mb-4">
+              Información del producto
+            </h5>
+
             <div className="row g-3">
+
+              {/* CÓDIGO */}
               <div className="col-md-4">
-                <label className="form-label fw-semibold">Código</label>
+                <label className="form-label fw-semibold">
+                  Código
+                </label>
+
                 <input
                   className="form-control"
+                  type="text"
                   name="codigo"
                   value={producto.codigo}
                   onChange={manejarCambio}
                   disabled={editando}
+                  placeholder="MF-001"
+                  maxLength={30}
                   required
                 />
               </div>
 
+              {/* NOMBRE */}
               <div className="col-md-8">
-                <label className="form-label fw-semibold">Nombre</label>
+                <label className="form-label fw-semibold">
+                  Nombre del producto
+                </label>
+
                 <input
                   className="form-control"
+                  type="text"
                   name="nombre"
                   value={producto.nombre}
                   onChange={manejarCambio}
+                  placeholder="Mesa de comedor"
+                  maxLength={120}
                   required
                 />
               </div>
 
-              <div className="col-md-4">
-                <label className="form-label fw-semibold">Categoría</label>
+              {/* CATEGORÍA */}
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">
+                  Categoría
+                </label>
+
                 <select
                   className="form-select"
                   name="categoria"
@@ -160,48 +433,76 @@ export default function Admin() {
                   onChange={manejarCambio}
                   required
                 >
-                  <option value="Muebles">Muebles</option>
-                  <option value="Oficina">Oficina</option>
+                  <option value="Muebles">
+                    Muebles
+                  </option>
+
+                  <option value="Oficina">
+                    Oficina
+                  </option>
                 </select>
               </div>
 
-              <div className="col-md-4">
-                <label className="form-label fw-semibold">Material</label>
+              {/* MATERIAL */}
+              <div className="col-md-6">
+                <label className="form-label fw-semibold">
+                  Material
+                </label>
+
                 <input
                   className="form-control"
+                  type="text"
                   name="material"
                   value={producto.material}
                   onChange={manejarCambio}
+                  placeholder="Madera de roble"
+                  maxLength={100}
                   required
                 />
               </div>
 
-              <div className="col-12">
-                <h5 className="border-bottom pb-2 mb-1">Fabricación</h5>
+              {/* FABRICACIÓN */}
+              <div className="col-12 mt-4">
+                <h5 className="border-bottom pb-2">
+                  Fabricación
+                </h5>
               </div>
+
               <div className="col-md-4">
-                <label className="form-label fw-semibold">Tiempo de fabricación (días)</label>
+                <label className="form-label fw-semibold">
+                  Tiempo de fabricación (días)
+                </label>
+
                 <input
                   className="form-control"
                   type="number"
-                  min="1"
                   name="tiempo"
+                  min="1"
+                  step="1"
                   value={producto.tiempo}
                   onChange={manejarCambio}
                   required
                 />
               </div>
 
-              <div className="col-12">
-                <h5 className="border-bottom pb-2 mb-1">Precio e inventario</h5>
+              {/* PRECIO E INVENTARIO */}
+              <div className="col-12 mt-4">
+                <h5 className="border-bottom pb-2">
+                  Precio e inventario
+                </h5>
               </div>
+
               <div className="col-md-4">
-                <label className="form-label fw-semibold">Precio</label>
+                <label className="form-label fw-semibold">
+                  Precio (CLP)
+                </label>
+
                 <input
                   className="form-control"
                   type="number"
-                  min="0"
                   name="precio"
+                  min="0"
+                  step="1"
                   value={producto.precio}
                   onChange={manejarCambio}
                   required
@@ -209,12 +510,16 @@ export default function Admin() {
               </div>
 
               <div className="col-md-4">
-                <label className="form-label fw-semibold">Stock</label>
+                <label className="form-label fw-semibold">
+                  Stock disponible
+                </label>
+
                 <input
                   className="form-control"
                   type="number"
-                  min="0"
                   name="stock"
+                  min="0"
+                  step="1"
                   value={producto.stock}
                   onChange={manejarCambio}
                   required
@@ -222,105 +527,226 @@ export default function Admin() {
               </div>
 
               <div className="col-md-4">
-                <label className="form-label fw-semibold">Stock crítico</label>
+                <label className="form-label fw-semibold">
+                  Stock crítico
+                </label>
+
                 <input
                   className="form-control"
                   type="number"
-                  min="0"
                   name="stockCritico"
+                  min="0"
+                  step="1"
                   value={producto.stockCritico}
                   onChange={manejarCambio}
                   required
                 />
               </div>
 
+              {/* IMAGEN */}
+              <div className="col-12 mt-4">
+                <h5 className="border-bottom pb-2">
+                  Imagen del producto
+                </h5>
+              </div>
+
               <div className="col-12">
-                <label className="form-label fw-semibold">Nombre de imagen</label>
+                <label className="form-label fw-semibold">
+                  Nombre de imagen
+                </label>
+
                 <input
                   className="form-control"
+                  type="text"
                   name="imagen"
                   placeholder="mesa-comedor.jpg"
                   value={producto.imagen}
                   onChange={manejarCambio}
                   required
                 />
+
+                <small className="text-muted">
+                  Ingresa el nombre del archivo de imagen
+                  correspondiente al producto.
+                </small>
               </div>
+
             </div>
 
-            <div className="d-flex gap-2 mt-4">
-              <button className="btn btn-primary" type="submit">
-                {editando ? 'Guardar Cambios' : 'Agregar Producto'}
+            {/* BOTONES ACTUALIZADOS */}
+            <div className="d-flex flex-wrap gap-3 mt-4">
+
+              {/* AGREGAR O GUARDAR */}
+              <button
+                type="submit"
+                className="btn admin-btn-guardar"
+                style={estiloGuardar}
+              >
+                <span aria-hidden="true">
+                  {editando ? '✓' : '⊕'}
+                </span>
+
+                <span>
+                  {editando
+                    ? 'Guardar cambios'
+                    : 'Agregar producto'}
+                </span>
               </button>
 
-              {editando && (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  onClick={limpiarFormulario}
-                >
-                  Cancelar
-                </button>
-              )}
+              {/* LIMPIAR O CANCELAR */}
+              <button
+                type="button"
+                className="btn admin-btn-limpiar"
+                style={estiloLimpiar}
+                onClick={limpiarFormulario}
+              >
+                <span aria-hidden="true">↻</span>
+
+                <span>
+                  {editando
+                    ? 'Cancelar edición'
+                    : 'Limpiar formulario'}
+                </span>
+              </button>
+
             </div>
+
           </form>
         </div>
       </div>
 
-      <h3 className="mb-3">Productos registrados</h3>
+      {/* TABLA DE PRODUCTOS */}
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
 
-      <div className="table-responsive">
-        <table className="table table-striped table-hover align-middle">
-          <thead className="table-dark">
-            <tr>
-              <th>Código</th>
-              <th>Nombre</th>
-              <th>Categoría</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
+        <div>
+          <h3 className="fw-bold mb-1">
+            Productos registrados
+          </h3>
 
-          <tbody>
-            {productos.map(prod => (
-              <tr key={prod.codigo}>
-                <td>{prod.codigo}</td>
-                <td>{prod.nombre}</td>
-                <td>{prod.categoria}</td>
-                <td>${prod.precio.toLocaleString('cl-CL')}</td>
-                <td>{prod.stock}</td>
-                <td>
-                  <div className="d-flex gap-2">
-                    <button
-                      className="btn btn-warning btn-sm"
-                      type="button"
-                      onClick={() => editarProducto(prod)}
-                    >
-                      Editar
-                    </button>
+          <p className="text-muted mb-0">
+            Consulta y administra el catálogo.
+          </p>
+        </div>
 
-                    <button
-                      className="btn btn-danger btn-sm"
-                      type="button"
-                      onClick={() => borrarProducto(prod.codigo)}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+        <div style={{ width: '100%', maxWidth: 350 }}>
+          <input
+            className="form-control"
+            type="search"
+            placeholder="Buscar producto o código..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
 
-            {productos.length === 0 && (
-              <tr>
-                <td colSpan="6" className="text-center">
-                  No hay productos registrados.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
       </div>
-    </div>
+
+      <div className="card shadow-sm overflow-hidden">
+
+        <div className="table-responsive">
+
+          <table className="table table-hover align-middle mb-0">
+
+            <thead>
+              <tr className="table-dark">
+                <th className="p-3">Código</th>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {productosFiltrados.map((prod) => {
+
+                const agotado = prod.stock <= 0;
+
+                const critico =
+                  !agotado &&
+                  prod.stock <= prod.stockCritico;
+
+                return (
+                  <tr key={prod.codigo}>
+
+                    <td className="p-3 fw-semibold">
+                      {prod.codigo}
+                    </td>
+
+                    <td>{prod.nombre}</td>
+
+                    <td>{prod.categoria}</td>
+
+                    <td className="fw-semibold">
+                      {formatoPrecio(prod.precio)}
+                    </td>
+
+                    <td>{prod.stock}</td>
+
+                    <td>
+
+                      {agotado ? (
+                        <span className="badge bg-danger">
+                          Agotado
+                        </span>
+                      ) : critico ? (
+                        <span className="badge bg-warning text-dark">
+                          Stock crítico
+                        </span>
+                      ) : (
+                        <span className="badge bg-success">
+                          Disponible
+                        </span>
+                      )}
+
+                    </td>
+
+                    <td>
+                      <div className="d-flex gap-2">
+
+                        <button
+                          type="button"
+                          className="btn btn-outline-warning btn-sm"
+                          onClick={() => editarProducto(prod)}
+                        >
+                          Editar
+                        </button>
+
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => borrarProducto(prod.codigo)}
+                        >
+                          Eliminar
+                        </button>
+
+                      </div>
+                    </td>
+
+                  </tr>
+                );
+              })}
+
+              {productosFiltrados.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="text-center py-5 text-muted"
+                  >
+                    No se encontraron productos.
+                  </td>
+                </tr>
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+      </div>
+
+    </main>
   );
 }

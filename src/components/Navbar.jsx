@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 export default function Navbar({ usuarioActual, cerrarSesion, cantidadCarrito = 0 }) {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-      <div className="container">
+      <div className="container-fluid px-3 px-md-5">
         <Link className="navbar-brand fw-bold" to="/">
           🌲 Maderas Finas
         </Link>
