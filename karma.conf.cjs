@@ -1,19 +1,26 @@
-
 module.exports = function (config) {
   config.set({
     basePath: '',
-    frameworks: ['jasmine', 'webpack'],
+    frameworks: ['jasmine'],
 
     files: [
       {
         pattern: 'tests/**/*.spec.js',
         watched: false,
         included: true
+      },
+      {
+        pattern: 'tests/**/*.spec.jsx',
+        watched: false,
+        included: true
       }
     ],
 
     preprocessors: {
-      'tests/**/*.spec.js': ['webpack']
+      'tests/**/*.spec.js': ['webpack'],
+      'tests/**/*.spec.jsx': ['webpack'],
+      'src/**/*.js': ['webpack', 'coverage'],
+      'src/**/*.jsx': ['webpack', 'coverage']
     },
 
     webpack: {
@@ -27,7 +34,8 @@ module.exports = function (config) {
             use: {
               loader: 'babel-loader',
               options: {
-                presets: ['@babel/preset-env', '@babel/preset-react']
+                presets: ['@babel/preset-env', '@babel/preset-react'],
+                plugins: ['istanbul']
               }
             }
           }
@@ -41,14 +49,20 @@ module.exports = function (config) {
     plugins: [
       require('karma-jasmine'),
       require('karma-firefox-launcher'),
-      require('karma-webpack')
+      require('karma-webpack'),
+      require('karma-coverage')
     ],
 
-    reporters: ['progress'],
+    reporters: ['progress', 'coverage'],
+    coverageReporter: {
+      type: 'html',
+      dir: 'coverage/'
+    },
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
     browsers: ['Firefox'],
+    customLaunchers: {},
     singleRun: true,
     autoWatch: false
   });

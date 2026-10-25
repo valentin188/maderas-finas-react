@@ -1,514 +1,287 @@
+import React, { useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { obtenerProductos, guardarCarrito } from '../data/mockData';
+import { guardarPedido } from '../data/pedidos';
+import { regionesChile } from '../data/ubicaciones';
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  guardarCarrito,
-  obtenerProductos
-} from '../data/mockData';
+const RESULTADO_COMPRA_KEY = 'resultado_ultima_compra';
+const CHECKOUT_DRAFT_KEY = 'checkout_pendiente';
+const formatoPrecio = (valor) => `$${Number(valor).toLocaleString('es-CL')}`;
 
-const datosIniciales = {
-  nombre: '',
-  correo: '',
-  telefono: '',
-  direccion: ''
-};
+const firmaCarrito = (carrito) => JSON.stringify(
+  carrito.map(({ codigo, cantidad }) => [codigo, Number(cantidad)]).sort(([a], [b]) => a.localeCompare(b)),
+);
 
-const formatoPrecio = (valor) =>
-  '$' + Number(valor).toLocaleString('es-CL');
-
-// Correos de ejemplo no permitidos
-const correosEjemplo = new Set([
-  'nombre.apellido@gmail.com',
-  'ejemplo@gmail.com',
-  'usuario@gmail.com',
-  'tu@correo.cl',
-  'test@test.com',
-  'prueba@prueba.com'
-]);
-
-// Validar todos los campos del pedido
-function validarDatos(datos) {
-  const errores = {};
-
-  const nombre = datos.nombre.trim();
-  const correo = datos.correo.trim().toLowerCase();
-  const telefono = datos.telefono.replace(/\D/g, '');
-  const direccion = datos.direccion.trim();
-
-  // Nombre completo
-  if (!nombre) {
-    errores.nombre = 'El nombre completo es obligatorio.';
-  } else if (
-    nombre.length < 3 ||
-    nombre.split(/\s+/).length < 2
-  ) {
-    errores.nombre = 'Ingresa tu nombre y apellido.';
+function leerCheckoutPendiente() {
+  try {
+    return JSON.parse(localStorage.getItem(CHECKOUT_DRAFT_KEY) || 'null');
+  } catch {
+    return null;
   }
-
-  // Correo electrónico
-  const formatoCorreo =
-    /^[a-z0-9_%+-]+(?:\.[a-z0-9_%+-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
-
-  if (!correo) {
-    errores.correo = 'El correo electrónico es obligatorio.';
-  } else if (
-    correo.length > 254 ||
-    !formatoCorreo.test(correo)
-  ) {
-    errores.correo = 'Ingresa un correo electrónico con formato válido.';
-  } else if (correosEjemplo.has(correo)) {
-    errores.correo = 'No utilices un correo de ejemplo.';
-  }
-
-  // Teléfono celular chileno
-  if (!telefono) {
-    errores.telefono = 'El teléfono es obligatorio.';
-  } else if (
-    !/^(?:56)?9\d{8}$/.test(telefono)
-  ) {
-    errores.telefono =
-      'Ingresa un celular chileno válido, por ejemplo +56912345678.';
-  }
-
-  // Dirección
-  if (!direccion) {
-    errores.direccion = 'La dirección es obligatoria.';
-  } else if (direccion.length < 5) {
-    errores.direccion = 'Ingresa una dirección más completa.';
-  }
-
-  return errores;
 }
 
-export default function Checkout({ carrito, setCarrito }) {
-  const [datos, setDatos] = useState({ ...datosIniciales });
-  const [tocados, setTocados] = useState({});
-  const [intentado, setIntentado] = useState(false);
-  const [errorGeneral, setErrorGeneral] = useState('');
-  const [pedido, setPedido] = useState(null);
+function crearDatosIniciales(usuarioActual, carrito) {
+  const pendiente = leerCheckoutPendiente();
+  if (pendiente?.firmaCarrito === firmaCarrito(carrito) && pendiente.datos) {
+    return {
+      nombre: pendiente.datos.nombre || '',
+      apellidos: pendiente.datos.apellidos || '',
+      email: pendiente.datos.email || '',
+      direccion: pendiente.datos.direccion || pendiente.datos.calle || '',
+      piso: pendiente.datos.piso || pendiente.datos.departamento || '',
+      region: pendiente.datos.region || regionesChile[0].region,
+      comuna: pendiente.datos.comuna || regionesChile[0].comunas[0],
+      indicaciones: pendiente.datos.indicaciones || '',
+    };
+  }
 
-  const errores = validarDatos(datos);
+  const regionRegistrada = regionesChile.some(({ region }) => region === usuarioActual?.region)
+    ? usuarioActual.region
+    : regionesChile[0].region;
+  const comunasRegion = regionesChile.find(({ region }) => region === regionRegistrada)?.comunas || [];
 
-  const total = carrito.reduce(
-    (suma, p) =>
-      suma + Number(p.precio) * Number(p.cantidad),
-    0
+  return {
+    nombre: usuarioActual?.nombre || '',
+    apellidos: usuarioActual?.apellidos || '',
+    email: usuarioActual?.email || '',
+    direccion: usuarioActual?.direccion || '',
+    piso: '',
+    region: regionRegistrada,
+    comuna: comunasRegion.includes(usuarioActual?.comuna) ? usuarioActual.comuna : comunasRegion[0],
+    indicaciones: '',
+  };
+}
+
+const correoTieneFormatoValido = (correo) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim());
+
+export default function Checkout({ carrito, setCarrito, usuarioActual }) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const simularFallo = searchParams.get('pago') === 'fallido';
+  const [datos, setDatos] = useState(() => crearDatosIniciales(usuarioActual, carrito));
+  const [error, setError] = useState('');
+  const catalogo = obtenerProductos();
+  const productosPedido = carrito.map((item) => {
+    const producto = catalogo.find(({ codigo }) => codigo === item.codigo);
+    return producto ? { ...producto, cantidad: Number(item.cantidad) } : null;
+  });
+  const subtotal = productosPedido.reduce(
+    (suma, producto) => suma + (producto ? Number(producto.precio) * producto.cantidad : 0), 0,
   );
 
-  // Mostrar errores después de salir del campo o intentar confirmar el pedido //
-  const esInvalido = (campo) =>
-    Boolean(errores[campo]) &&
-    (Boolean(tocados[campo]) || intentado);
-
-  const marcarTocado = (campo) => {
-    setTocados((anterior) => ({
-      ...anterior,
-      [campo]: true
+  const cambiarDato = ({ target: { name, value } }) => {
+    setDatos((actuales) => ({
+      ...actuales,
+      [name]: value,
+      ...(name === 'region' ? { comuna: '' } : {}),
     }));
+    setError('');
   };
 
-  // Actualizar campos
-  const actualizarCampo = (e) => {
-    const { name, value } = e.target;
+  const confirmarCompra = (evento) => {
+    evento.preventDefault();
+    const datosPedido = {
+      nombre: datos.nombre.trim(),
+      apellidos: datos.apellidos.trim(),
+      email: datos.email.trim().toLowerCase(),
+      direccion: datos.direccion.trim(),
+      piso: datos.piso.trim(),
+      region: datos.region,
+      comuna: datos.comuna,
+      indicaciones: datos.indicaciones.trim(),
+    };
+    const comunasValidas = regionesChile.find(({ region }) => region === datosPedido.region)?.comunas || [];
 
-    setDatos((anterior) => ({
-      ...anterior,
-      [name]: value
-    }));
-
-    setErrorGeneral('');
-  };
-
-  // Confirmar el pedido
-  const confirmar = (e) => {
-    e.preventDefault();
-
-    setIntentado(true);
-    setErrorGeneral('');
-
-    const erroresActuales = validarDatos(datos);
-
-    // Bloquear si algún campo es inválido
-    if (Object.keys(erroresActuales).length > 0) {
-      setErrorGeneral(
-        'Debes completar y corregir todos los campos obligatorios.'
-      );
+    if (datosPedido.nombre.length < 2 || datosPedido.nombre.length > 50) {
+      setError('Ingresa un nombre válido (máximo 50 caracteres).');
+      return;
+    }
+    if (datosPedido.apellidos.length < 2 || datosPedido.apellidos.length > 100) {
+      setError('Ingresa apellidos válidos (máximo 100 caracteres).');
+      return;
+    }
+    if (!correoTieneFormatoValido(datosPedido.email) || datosPedido.email.length > 100) {
+      setError('Ingresa un correo electrónico válido.');
+      return;
+    }
+    if (datosPedido.direccion.length < 5 || datosPedido.direccion.length > 150) {
+      setError('Ingresa una dirección válida (máximo 150 caracteres).');
+      return;
+    }
+    if (!comunasValidas.includes(datosPedido.comuna)) {
+      setError('Selecciona una región y comuna válidas.');
+      return;
+    }
+    if (!carrito.length || productosPedido.some((producto) => !producto)) {
+      setError('No hay productos válidos para confirmar en el carrito.');
       return;
     }
 
-    const catalogo = obtenerProductos();
-
-    // Verificar cantidades y stock
-    const carritoValido =
-      carrito.length > 0 &&
-      carrito.every((item) => {
-        const productoActual = catalogo.find(
-          (p) => p.codigo === item.codigo
-        );
-
-        return (
-          productoActual &&
-          Number.isInteger(item.cantidad) &&
-          item.cantidad >= 1 &&
-          item.cantidad <= productoActual.stock
-        );
-      });
-
-    if (!carritoValido) {
-      setErrorGeneral(
-        'Hay un problema con el stock. Revisa tu carrito.'
-      );
-      return;
-    }
-
-    // Construir pedido con los precios actuales
-    const productosPedido = carrito.map((item) => {
-      const actual = catalogo.find(
-        (p) => p.codigo === item.codigo
-      );
-
-      return {
-        codigo: actual.codigo,
-        nombre: actual.nombre,
-        cantidad: item.cantidad,
-        precio: actual.precio
-      };
+    const catalogoActual = obtenerProductos();
+    const stockDisponible = productosPedido.every((producto) => {
+      const actual = catalogoActual.find(({ codigo }) => codigo === producto.codigo);
+      return actual && Number.isInteger(producto.cantidad) && producto.cantidad > 0 && producto.cantidad <= Number(actual.stock);
     });
-
-    const nuevoPedido = {
-      numero: 'MF-' + Date.now(),
+    const total = productosPedido.reduce((suma, producto) => suma + Number(producto.precio) * producto.cantidad, 0);
+    const numero = `MF-${Date.now()}`;
+    const compra = {
+      numero,
       fecha: new Date().toISOString(),
-      productos: productosPedido,
-      total: productosPedido.reduce(
-        (suma, p) => suma + p.precio * p.cantidad,
-        0
-      )
+      estado: stockDisponible && !simularFallo ? 'exitosa' : 'fallida',
+      cliente: `${datosPedido.nombre} ${datosPedido.apellidos}`,
+      nombre: datosPedido.nombre,
+      apellidos: datosPedido.apellidos,
+      email: datosPedido.email,
+      direccion: datosPedido.direccion,
+      piso: datosPedido.piso,
+      region: datosPedido.region,
+      comuna: datosPedido.comuna,
+      indicaciones: datosPedido.indicaciones,
+      direccionEntrega: [datosPedido.direccion, datosPedido.piso, datosPedido.comuna, datosPedido.region].filter(Boolean).join(', '),
+      metodoEntrega: 'Despacho a domicilio',
+      costoDespacho: 0,
+      articulos: productosPedido.map(({ codigo, nombre, imagen, precio, cantidad }) => ({ codigo, nombre, imagen, precio: Number(precio), cantidad })),
+      subtotal: total,
+      total,
+      motivoFallo: !stockDisponible
+        ? 'No se pudo completar el pago porque ya no hay stock suficiente para todos los productos.'
+        : simularFallo ? 'No se pudo completar el pago. Puedes volver a intentarlo.' : '',
     };
 
     try {
-      const guardados = JSON.parse(
-        localStorage.getItem('pedidos_demo') || '[]'
-      );
+      localStorage.setItem(RESULTADO_COMPRA_KEY, JSON.stringify(compra));
 
-      const anteriores = Array.isArray(guardados)
-        ? guardados
-        : [];
+      if (compra.estado === 'exitosa') {
+        const productosActualizados = catalogoActual.map((producto) => {
+          const comprado = compra.articulos.find(({ codigo }) => codigo === producto.codigo);
+          return comprado ? { ...producto, stock: Number(producto.stock) - comprado.cantidad } : producto;
+        });
+        localStorage.setItem('productos', JSON.stringify(productosActualizados));
+        guardarPedido({
+          id: numero,
+          cliente: compra.cliente,
+          email: compra.email,
+          articulos: compra.articulos,
+          total,
+          estado: 'Pendiente',
+          creadoEn: compra.fecha,
+          direccionEntrega: compra.direccionEntrega,
+          metodoEntrega: compra.metodoEntrega,
+          metodoPago: 'Pago confirmado',
+        });
+        localStorage.removeItem(CHECKOUT_DRAFT_KEY);
+        guardarCarrito([]);
+        setCarrito([]);
+      } else {
+        localStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({ datos: datosPedido, firmaCarrito: firmaCarrito(carrito) }));
+      }
 
-      // Guardar pedido de demostración sin persistir datos personales
-      localStorage.setItem(
-        'pedidos_demo',
-        JSON.stringify([...anteriores, nuevoPedido])
-      );
-
-      guardarCarrito([]);
-      setCarrito([]);
-
-      setPedido({
-        ...nuevoPedido,
-        nombreCliente: datos.nombre.trim()
-      });
-
+      navigate(`/resultado-pago/${compra.estado}`);
     } catch {
-      setErrorGeneral(
-        'No se pudo registrar el pedido de demostración.'
-      );
+      setError('No se pudo guardar el resultado de la compra. Inténtalo nuevamente.');
     }
   };
 
-  // Confirmación exitosa
-  if (pedido) {
-    return (
-      <main className="container py-5">
-        <div
-          className="carrito-resumen p-5 text-center mx-auto"
-          style={{ maxWidth: 680 }}
-        >
-          <h2 className="fw-bold">
-            ¡Pedido registrado correctamente!
-          </h2>
-
-          <p className="mt-3">
-            Gracias, {pedido.nombreCliente}.
-          </p>
-
-          <p>
-            Número de pedido:
-            <strong> {pedido.numero}</strong>
-          </p>
-
-          <h3 className="precio-carrito">
-            {formatoPrecio(pedido.total)}
-          </h3>
-
-          <p className="text-muted mt-3">
-            Este pedido es una demostración.
-            No se realizó ningún cobro ni envío.
-          </p>
-          
-          <Link
-            to="/productos"
-            className="btn btn-volver-catalogo mt-4"
-          >
-            <span aria-hidden="true">←</span>
-            <span>Volver al catálogo</span>
-          </Link>
-
-        </div>
-      </main>
-    );
-  }
-
-  // Carrito vacío
-  if (carrito.length === 0) {
+  if (!carrito.length) {
     return (
       <main className="container py-5 text-center">
-        <h2>No tienes productos para confirmar</h2>
-
-        <Link to="/productos" className="btn btn-madera mt-3">
-          Ver productos
-        </Link>
+        <h1 className="h2 fw-bold">No tienes productos para confirmar</h1>
+        <Link to="/productos" className="btn btn-madera mt-3">Ver productos</Link>
       </main>
     );
   }
 
+  const comunasDisponibles = regionesChile.find(({ region }) => region === datos.region)?.comunas || [];
   return (
-    <main className="container-fluid pagina-carrito px-3 px-md-5 py-5">
+    <main className="container py-5 checkout-page">
+      <div className="checkout-card">
+        <header className="checkout-heading">
+          <p className="eyebrow mb-1">Compra</p>
+          <h1 className="checkout-title">Checkout</h1>
+          <p className="text-muted mb-0">Completa la información para finalizar tu compra.</p>
+        </header>
 
-      <h1 className="fw-bold mb-2">
-        Confirmar pedido
-      </h1>
+        <form onSubmit={confirmarCompra} noValidate>
+          {error && <div className="alert alert-danger" role="alert">{error}</div>}
 
-      <p className="text-muted mb-4">
-        Formulario de prueba. Utiliza datos ficticios.
-      </p>
+          <section className="checkout-section" aria-labelledby="checkout-cart-title">
+            <h2 id="checkout-cart-title" className="h4 fw-bold">Carrito de compra</h2>
+          <p className="text-muted small">Productos seleccionados para tu compra.</p>
+            <div className="table-responsive checkout-table-wrap">
+              <table className="table align-middle mb-0">
+                <thead>
+                  <tr><th scope="col">Imagen</th><th scope="col">Nombre</th><th scope="col">Precio</th><th scope="col">Cantidad</th><th scope="col">Subtotal</th></tr>
+                </thead>
+                <tbody>
+                  {productosPedido.map((producto, index) => producto && (
+                    <tr key={producto.codigo}>
+                      <td><img className="checkout-product-image" src={`/img/productos/${producto.imagen}`} alt={producto.nombre} /></td>
+                      <td>{producto.nombre}</td>
+                      <td className="text-nowrap">{formatoPrecio(producto.precio)}</td>
+                      <td>{producto.cantidad}</td>
+                      <td className="text-nowrap">{formatoPrecio(producto.precio * producto.cantidad)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
-      <div className="row g-4">
-
-        {/* FORMULARIO DEL CLIENTE */}
-        <div className="col-lg-8">
-
-          <form
-            className="carrito-producto p-4"
-            onSubmit={confirmar}
-            noValidate
-          >
-
-            <h3 className="fs-4 mb-2">
-              Datos del cliente
-            </h3>
-
-            <p className="text-muted small mb-4">
-              Todos los campos marcados con * son obligatorios.
-            </p>
-
-            {errorGeneral && (
-              <div className="alert alert-danger" role="alert">
-                {errorGeneral}
+          <section className="checkout-section" aria-labelledby="checkout-customer-title">
+            <h2 id="checkout-customer-title" className="h4 fw-bold">Información del cliente</h2>
+            <p className="text-muted small">Completa la siguiente información.</p>
+            <div className="row g-3">
+              <div className="col-12 col-md-4">
+                <label className="form-label" htmlFor="checkout-nombre">Nombre <span aria-hidden="true">*</span></label>
+                <input id="checkout-nombre" className="form-control" name="nombre" value={datos.nombre} onChange={cambiarDato} autoComplete="given-name" maxLength="50" required />
               </div>
-            )}
-
-            {/* NOMBRE COMPLETO */}
-            <div className="mb-3">
-              <label
-                htmlFor="pedido-nombre"
-                className="form-label fw-semibold"
-              >
-                Nombre completo
-                <span className="text-danger"> *</span>
-              </label>
-
-              <input
-                id="pedido-nombre"
-                type="text"
-                name="nombre"
-                className={`form-control ${
-                  esInvalido('nombre') ? 'is-invalid' : ''
-                }`}
-                placeholder="Nombre y apellido"
-                value={datos.nombre}
-                onChange={actualizarCampo}
-                onBlur={() => marcarTocado('nombre')}
-                autoComplete="name"
-                maxLength={100}
-                required
-                aria-invalid={esInvalido('nombre')}
-              />
-
-              {esInvalido('nombre') && (
-                <div className="invalid-feedback">
-                  {errores.nombre}
-                </div>
-              )}
-            </div>
-
-            {/* CORREO ELECTRÓNICO */}
-            <div className="mb-3">
-              <label
-                htmlFor="pedido-correo"
-                className="form-label fw-semibold"
-              >
-                Correo electrónico
-                <span className="text-danger"> *</span>
-              </label>
-
-              <input
-                id="pedido-correo"
-                type="email"
-                name="correo"
-                className={`form-control ${
-                  esInvalido('correo') ? 'is-invalid' : ''
-                }`}
-                placeholder="Ingresa tu correo electrónico"
-                value={datos.correo}
-                onChange={actualizarCampo}
-                onBlur={() => marcarTocado('correo')}
-                autoComplete="email"
-                maxLength={254}
-                required
-                aria-invalid={esInvalido('correo')}
-              />
-
-              {esInvalido('correo') && (
-                <div className="invalid-feedback">
-                  {errores.correo}
-                </div>
-              )}
-            </div>
-
-            {/* TELÉFONO */}
-            <div className="mb-3">
-              <label
-                htmlFor="pedido-telefono"
-                className="form-label fw-semibold"
-              >
-                Teléfono
-                <span className="text-danger"> *</span>
-              </label>
-
-              <input
-                id="pedido-telefono"
-                type="tel"
-                name="telefono"
-                className={`form-control ${
-                  esInvalido('telefono') ? 'is-invalid' : ''
-                }`}
-                placeholder="+56912345678"
-                value={datos.telefono}
-                onChange={actualizarCampo}
-                onBlur={() => marcarTocado('telefono')}
-                autoComplete="tel"
-                maxLength={20}
-                required
-                aria-invalid={esInvalido('telefono')}
-              />
-
-              {esInvalido('telefono') && (
-                <div className="invalid-feedback">
-                  {errores.telefono}
-                </div>
-              )}
-            </div>
-
-            {/* DIRECCIÓN */}
-            <div className="mb-4">
-              <label
-                htmlFor="pedido-direccion"
-                className="form-label fw-semibold"
-              >
-                Dirección
-                <span className="text-danger"> *</span>
-              </label>
-
-              <input
-                id="pedido-direccion"
-                type="text"
-                name="direccion"
-                className={`form-control ${
-                  esInvalido('direccion') ? 'is-invalid' : ''
-                }`}
-                placeholder="Calle, número, comuna, región"
-                value={datos.direccion}
-                onChange={actualizarCampo}
-                onBlur={() => marcarTocado('direccion')}
-                autoComplete="street-address"
-                maxLength={150}
-                required
-                aria-invalid={esInvalido('direccion')}
-              />
-
-              {esInvalido('direccion') && (
-                <div className="invalid-feedback">
-                  {errores.direccion}
-                </div>
-              )}
-            </div>
-
-            {/* BOTÓN CONFIRMAR PEDIDO */}
-            <button
-              type="submit"
-              className="btn btn-confirmar-pedido w-100 mt-3"
-            >
-              <span className="d-flex align-items-center gap-2">
-                <span aria-hidden="true"></span>
-                Confirmar pedido
-              </span>
-
-              <span
-                className="flecha-confirmar"
-                aria-hidden="true"
-              >
-                →
-              </span>
-            </button>
-
-          </form>
-        </div>
-
-        {/* RESUMEN DEL PEDIDO */}
-        <div className="col-lg-4">
-
-          <div className="carrito-resumen p-4">
-
-            <h3 className="fs-4 fw-bold">
-              Resumen del pedido
-            </h3>
-
-            <hr />
-
-            {carrito.map((producto) => (
-              <div
-                key={producto.codigo}
-                className="d-flex justify-content-between gap-3 mb-3"
-              >
-                <span>
-                  {producto.nombre} × {producto.cantidad}
-                </span>
-
-                <strong>
-                  {formatoPrecio(
-                    producto.precio * producto.cantidad
-                  )}
-                </strong>
+              <div className="col-12 col-md-4">
+                <label className="form-label" htmlFor="checkout-apellidos">Apellidos <span aria-hidden="true">*</span></label>
+                <input id="checkout-apellidos" className="form-control" name="apellidos" value={datos.apellidos} onChange={cambiarDato} autoComplete="family-name" maxLength="100" required />
               </div>
-            ))}
-
-            <hr />
-
-            <div className="d-flex justify-content-between">
-              <strong>Total estimado</strong>
-
-              <strong className="precio-carrito">
-                {formatoPrecio(total)}
-              </strong>
+              <div className="col-12 col-md-4">
+                <label className="form-label" htmlFor="checkout-email">Correo <span aria-hidden="true">*</span></label>
+                <input id="checkout-email" type="email" className="form-control" name="email" value={datos.email} onChange={cambiarDato} autoComplete="email" maxLength="100" required />
+              </div>
             </div>
+          </section>
 
-            <p className="text-muted small mt-3">
-              El despacho se coordina por separado.
-            </p>
+          <section className="checkout-section" aria-labelledby="checkout-delivery-title">
+            <h2 id="checkout-delivery-title" className="h4 fw-bold">Dirección de entrega de los productos</h2>
+            <div className="row g-3">
+              <div className="col-12 col-md-6">
+                <label className="form-label" htmlFor="checkout-direccion">Dirección <span aria-hidden="true">*</span></label>
+                <input id="checkout-direccion" className="form-control" name="direccion" value={datos.direccion} onChange={cambiarDato} autoComplete="street-address" maxLength="150" required />
+              </div>
+              <div className="col-12 col-md-6">
+                <label className="form-label" htmlFor="checkout-piso">Piso (opcional)</label>
+                <input id="checkout-piso" className="form-control" name="piso" value={datos.piso} onChange={cambiarDato} autoComplete="address-line2" maxLength="50" />
+              </div>
+              <div className="col-12 col-md-6">
+                <label className="form-label" htmlFor="checkout-region">Región <span aria-hidden="true">*</span></label>
+                <select id="checkout-region" className="form-select" name="region" value={datos.region} onChange={cambiarDato} required>
+                  {regionesChile.map(({ region }) => <option key={region} value={region}>{region}</option>)}
+                </select>
+              </div>
+              <div className="col-12 col-md-6">
+                <label className="form-label" htmlFor="checkout-comuna">Comuna <span aria-hidden="true">*</span></label>
+                <select id="checkout-comuna" className="form-select" name="comuna" value={datos.comuna} onChange={cambiarDato} required>
+                  {comunasDisponibles.map((comuna) => <option key={comuna} value={comuna}>{comuna}</option>)}
+                </select>
+              </div>
+              <div className="col-12">
+                <label className="form-label" htmlFor="checkout-indicaciones">Indicaciones para la entrega (opcional)</label>
+                <textarea id="checkout-indicaciones" className="form-control" name="indicaciones" value={datos.indicaciones} onChange={cambiarDato} maxLength="300" rows="3" placeholder="Ej.: entre calles, color del edificio, no tiene timbre." />
+              </div>
+            </div>
+          </section>
 
+          <div className="checkout-paybar">
+            <div><span>Total a pagar</span><strong>{formatoPrecio(subtotal)}</strong></div>
+            <button className="btn btn-madera" type="submit">Pagar ahora {formatoPrecio(subtotal)}</button>
           </div>
-        </div>
-
+          <Link to="/carrito" className="btn btn-outline-madera">Volver al carrito</Link>
+        </form>
       </div>
     </main>
   );

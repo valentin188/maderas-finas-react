@@ -101,10 +101,6 @@ export default function Carrito({ carrito, setCarrito }) {
           Mi carrito de compras
         </h1>
 
-        <p className="text-muted">
-          Revisa los muebles que seleccionaste.
-        </p>
-
       </div>
 
       {/* Carrito vacío */}
@@ -353,11 +349,6 @@ export default function Carrito({ carrito, setCarrito }) {
                 </strong>
               </div>
 
-              {/* Información de envío */}
-              <p className="text-muted small mt-3">
-                El despacho se coordina por separado.
-              </p>
-
               {/* Validación de stock */}
               {!stockValido && (
                 <div
@@ -423,9 +414,6 @@ export default function Carrito({ carrito, setCarrito }) {
                 </button>
               )}
 
-              <p className="texto-pedido-seguro">
-                Siguiente paso: confirmar datos
-              </p>
             </div>
           </div>
         </div>

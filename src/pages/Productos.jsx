@@ -1,5 +1,6 @@
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import {
   obtenerProductos,
@@ -17,6 +18,10 @@ export default function Productos({ setCarrito }) {
 
   // Mensaje de confirmación
   const [mensaje, setMensaje] = useState('');
+  const [productoAgregado, setProductoAgregado] = useState('');
+  const temporizadorAgregado = useRef(null);
+
+  useEffect(() => () => window.clearTimeout(temporizadorAgregado.current), []);
 
   // Formato de precios en pesos chilenos
   const formatoPrecio = (precio) => {
@@ -85,6 +90,10 @@ export default function Productos({ setCarrito }) {
     if (setCarrito) {
       setCarrito(nuevoCarrito);
     }
+
+    setProductoAgregado(producto.codigo);
+    window.clearTimeout(temporizadorAgregado.current);
+    temporizadorAgregado.current = window.setTimeout(() => setProductoAgregado(''), 2200);
 
     // Mostrar mensaje de confirmación
     setMensaje(
@@ -212,51 +221,24 @@ export default function Productos({ setCarrito }) {
 
                 </span>
 
+                <Link
+                  className="btn btn-outline-madera w-100 mb-2"
+                  to={`/productos/${prod.codigo}`}
+                >
+                  Ver detalle
+                </Link>
+
                 {/* BOTÓN AGREGAR AL CARRITO */}
                 <button
                   type="button"
-                  className="btn w-100 mt-auto"
+                  className={`btn btn-agregar-carrito w-100 mt-auto ${productoAgregado === prod.codigo ? 'is-added' : ''}`}
                   disabled={prod.stock <= 0}
                   onClick={() => agregarAlCarrito(prod)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    width: '100%',
-                    minHeight: '55px',
-                    padding: '14px 20px',
-
-                    background: prod.stock <= 0
-                      ? '#b9ada3'
-                      : 'linear-gradient(110deg, #5c3a21, #8c5a32)',
-
-                    color: '#ffffff',
-                    border: '1px solid #8c5a32',
-                    borderRadius: '11px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-
-                    cursor: prod.stock <= 0
-                      ? 'not-allowed'
-                      : 'pointer',
-
-                    boxShadow:
-                      '0 5px 15px rgba(92, 58, 33, 0.18)',
-
-                    transition: 'all 0.2s ease'
-                  }}
+                  aria-live="polite"
                 >
-
-                  <span aria-hidden="true">
-                  </span>
-
-                  <span>
-                    {prod.stock <= 0
-                      ? 'Producto agotado'
-                      : 'Agregar al carrito'}
-                  </span>
-
+                  <span>{prod.stock <= 0
+                    ? 'Producto agotado'
+                    : productoAgregado === prod.codigo ? 'Agregado al carrito ✓' : 'Agregar al carrito'}</span>
                 </button>
 
               </div>

@@ -142,7 +142,7 @@ export default function Categorias() {
 
                       {/* BOTÓN VER PRODUCTOS */}
                       <Link
-                        to="/productos"
+                        to={`/productos/${producto.codigo}`}
                         className="btn w-100 mt-auto"
                         style={{
                           display: 'flex',
@@ -162,7 +162,7 @@ export default function Categorias() {
                             '0 5px 15px rgba(92, 58, 33, 0.15)'
                         }}
                       >
-                        <span>Ver en catálogo</span>
+                        <span>Ver detalle</span>
                         <span aria-hidden="true">→</span>
                       </Link>
 

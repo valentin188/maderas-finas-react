@@ -4,7 +4,7 @@ import {
   obtenerProductoPorCodigo,
   guardarProducto,
   eliminarProducto
-} from '../src/data/mockData';
+} from '../src/data/mockData.js';
 
 describe('Gestión de productos', () => {
   beforeEach(() => {
@@ -81,5 +81,25 @@ describe('Gestión de productos', () => {
     eliminarProducto('PR007');
 
     expect(obtenerProductoPorCodigo('PR007')).toBeNull();
+  });
+
+  it('no debe incluir el producto eliminado en la lista', () => {
+    guardarProducto({
+      codigo: 'PR007',
+      nombre: 'Mesa auxiliar',
+      categoria: 'Muebles',
+      material: 'Madera de pino',
+      tiempo: 4,
+      precio: 90000,
+      stock: 12,
+      stockCritico: 3,
+      imagen: 'mesa-auxiliar.jpg'
+    });
+
+    eliminarProducto('PR007');
+    const productos = obtenerProductos();
+    expect(
+      productos.some(producto => producto.codigo === 'PR007')
+    ).toBe(false);
   });
 });

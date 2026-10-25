@@ -1,13 +1,15 @@
-// Maderas Finas · datos para la demostración académica; no hay servidor ni pagos reales.
+// src/data/mockData.js
 const productosIniciales = [
   {
-    codigo: 'PROD001',
-    nombre: 'Mesa de comedor 6 puestos',
-    categoria: 'Muebles',
-    material: 'Madera de roble',
+    codigo: "PR001",
+    nombre: "Mesa de comedor 6 puestos",
+    categoria: "Muebles",
+    material: "Madera de roble",
+    tiempo: 8,
     precio: 250000,
-    stock: 10,
-    imagen: ''
+    stock: 25,
+    stockCritico: 5,
+    imagen: "mesa-comedor.jpg"
   },
   {
     codigo: "PR002",
@@ -66,74 +68,154 @@ const productosIniciales = [
   }
 ];
 
-
 function leerJSON(clave, fallback) {
   try {
-    const dato = localStorage.getItem(clave);
-    return dato === null ? fallback : JSON.parse(dato);
-  } catch { return fallback; }
+    const valor = localStorage.getItem(clave);
+    return valor === null ? fallback : JSON.parse(valor);
+  } catch {
+    return fallback;
+  }
 }
-function escribirJSON(clave, dato) {
-  try { localStorage.setItem(clave, JSON.stringify(dato)); return true; }
-  catch { return false; }
+
+function escribirJSON(clave, valor) {
+  try {
+    localStorage.setItem(clave, JSON.stringify(valor));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export const inicializarStorage = () => {
-  // Mantener productos antiguos sin sobrescribir stock, precios ni nuevos registros.
-  const guardados = leerJSON('productos', []);
-  const actuales = Array.isArray(guardados) ? [...guardados] : [];
-  for (const inicial of productosIniciales) {
-    if (!actuales.some((p) => p.codigo === inicial.codigo)) actuales.push(inicial);
+  const guardados = leerJSON("productos", []);
+  const productosActualizados = Array.isArray(guardados) ? [...guardados] : [];
+
+  productosIniciales.forEach((productoInicial) => {
+    const existe = productosActualizados.some(
+      producto => producto.codigo === productoInicial.codigo
+    );
+    if (!existe) {
+      productosActualizados.push(productoInicial);
+    }
+  });
+
+  escribirJSON("productos", productosActualizados);
+  let usuarios = [];
+  try {
+    usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
+    if (!Array.isArray(usuarios)) usuarios = [];
+  } catch {
+    usuarios = [];
   }
-  escribirJSON('productos', actuales);
-  if (leerJSON('usuarios', null) === null) {
-    escribirJSON('usuarios', [{
-      run: '11111111K', nombre: 'Administrador', apellidos: 'Sistema',
-      email: 'admin@duoc.cl', password: 'Admin123', tipo: 'Admin',
-    }]);
-  }
+
+  // Retira únicamente la cuenta Vendedor de demostración que esta aplicación
+  // sembraba anteriormente, para que las cuentas vendedor se creen desde Admin.
+  usuarios = usuarios.filter(usuario => !(
+    String(usuario.email || "").toLowerCase() === "vendedor@duoc.cl" &&
+    usuario.nombre === "Vendedor" &&
+    usuario.apellidos === "Sistema" &&
+    usuario.password === "Vendedor123" &&
+    usuario.tipo === "Vendedor" &&
+    !usuario.run
+  ));
+
+  const cuentasIniciales = [
+    {
+      nombre: "Administrador",
+      apellidos: "Sistema",
+      email: "admin@duoc.cl",
+      password: "Admin123",
+      tipo: "Admin"
+    }
+  ];
+
+  cuentasIniciales.forEach(cuentaInicial => {
+    const existe = usuarios.some(usuario =>
+      String(usuario.email || "").toLowerCase() === cuentaInicial.email
+    );
+    if (!existe) usuarios.push(cuentaInicial);
+  });
+
+  localStorage.setItem("usuarios", JSON.stringify(usuarios));
 };
 
 export const obtenerProductos = () => {
   inicializarStorage();
-  const productos = leerJSON('productos', []);
+  const productos = leerJSON("productos", []);
   return Array.isArray(productos) ? productos : [];
 };
-export const obtenerProductoPorCodigo = (codigo) => obtenerProductos().find((p) => p.codigo === codigo) || null;
+
+export const obtenerUsuarios = () => {
+  inicializarStorage();
+  try {
+    const usuarios = JSON.parse(localStorage.getItem("usuarios") || "[]");
+    return Array.isArray(usuarios) ? usuarios : [];
+  } catch {
+    return [];
+  }
+};
+
+export const guardarUsuarios = (usuarios) => {
+  localStorage.setItem("usuarios", JSON.stringify(usuarios));
+  return usuarios;
+};
+
+export const obtenerProductoPorCodigo = (codigo) => {
+  const productos = obtenerProductos();
+  return productos.find(p => p.codigo === codigo) || null;
+};
+
 export const guardarProducto = (producto) => {
   const productos = obtenerProductos();
-  const i = productos.findIndex((p) => p.codigo === producto.codigo);
-  if (i === -1) productos.push(producto); else productos[i] = producto;
-  escribirJSON('productos', productos);
-  return productos;
-};
-export const eliminarProducto = (codigo) => {
-  const productos = obtenerProductos().filter((p) => p.codigo !== codigo);
-  escribirJSON('productos', productos);
+  const index = productos.findIndex(p => p.codigo === producto.codigo);
+
+  if (index !== -1) {
+    productos[index] = producto;
+  } else {
+    productos.push(producto);
+  }
+
+  localStorage.setItem("productos", JSON.stringify(productos));
   return productos;
 };
 
-// Se leen los precios y el stock del catálogo y nunca del carrito almacenado.
+export const eliminarProducto = (codigo) => {
+  const productos = obtenerProductos().filter(p => p.codigo !== codigo);
+  localStorage.setItem("productos", JSON.stringify(productos));
+  return productos;
+};
+
+// El carrito guarda códigos y cantidades; los precios y el stock siempre se leen del catálogo.
 export const obtenerCarrito = () => {
-  const almacenado = leerJSON('carrito', []);
+  const almacenado = leerJSON("carrito", []);
   if (!Array.isArray(almacenado)) return [];
-  const productos = new Map(obtenerProductos().map((p) => [p.codigo, p]));
+
+  const productos = new Map(obtenerProductos().map(producto => [producto.codigo, producto]));
   const acumulado = new Map();
+
   for (const item of almacenado) {
     const producto = item && productos.get(item.codigo);
     if (!producto) continue;
+
     const stock = Math.max(0, Math.trunc(Number(producto.stock) || 0));
     const cantidad = Math.max(0, Math.trunc(Number(item.cantidad) || 0));
     if (!stock || !cantidad) continue;
+
     acumulado.set(item.codigo, {
       ...producto,
       cantidad: Math.min(stock, (acumulado.get(item.codigo)?.cantidad || 0) + cantidad),
     });
   }
+
   return [...acumulado.values()];
 };
-export const guardarCarrito = (carrito) => escribirJSON('carrito', carrito.map(({ codigo, cantidad }) => ({ codigo, cantidad })));
+
+export const guardarCarrito = (carrito) => escribirJSON(
+  "carrito",
+  (Array.isArray(carrito) ? carrito : []).map(({ codigo, cantidad }) => ({ codigo, cantidad }))
+);
+
 export const guardarPedidoDemo = (pedido) => {
-  const guardados = leerJSON('pedidos_demo', []);
-  return escribirJSON('pedidos_demo', [...(Array.isArray(guardados) ? guardados : []), pedido]);
+  const guardados = leerJSON("pedidos_demo", []);
+  return escribirJSON("pedidos_demo", [...(Array.isArray(guardados) ? guardados : []), pedido]);
 };
